@@ -3,31 +3,46 @@
 class Player
 {
 public:
-  Player(std::string argin_name)
+  // Constructor with the same name as the class
+  Player(std::string name)
   {
-    // this->name = name;
-    name = argin_name;
+    this->name = name;
   }
 
-  std::string name;
-
-  // Accessor for team_name
-  void set TeamName(std::string argin_team)
+  // Set team name, if given a correct team name (accessor)
+  int setTeamName(std::string team)
   {
-    team_name = argin_team;
-    // adicionar restrições que só permitam equipas green, red, blue
+    if (team == "red" || team == "green" || team == "blue")
+    {
+      // this->team é a propriedade da class definida no private, team é o argumento de entrada
+      this->team = team;
+      return 1;
+    }
+    else
+    {
+      std::cout << "cannot set team name to " << team << std::endl;
+      return 0;
+    }
   }
+
+  // Gets team name (accessor)
+  std::string getTeam(void)
+  {
+    return team;
+  }
+
+  std::string name;  // A public atribute
 
 private:
-  // não pode ser usado fora da class
-  std::string team_name;
+  std::string team;
 };
 
 int main()
 {
-  std::string player_name = "bramos";
   // Creating an instance of class Player
-  Player player(player_name);
+  Player player("bramos");
+  player.setTeamName("red");
 
-  std::cout << "Created an instance of class player with public name " << player.name << std::endl;
+  std::cout << "player.name is " << player.name << std::endl;
+  std::cout << "team is " << player.getTeam() << std::endl;
 }
