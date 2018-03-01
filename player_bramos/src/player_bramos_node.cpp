@@ -1,82 +1,130 @@
 #include <iostream>
+#include <vector>
 
+// Boost includes
+#include <boost/shared_ptr.hpp>
+
+// Ros includes
+#include <ros/ros.h>
+#include <rws2018_libs/team.h>
+#include <tf/transform_broadcaster.h>
+
+using namespace std;
+
+namespace rws_bramos
+{
 class Player
 {
 public:
-  // Constructor with the same name as the class
-  Player(std::string argin_name)
+  Player(string argin_name)
   {
     name = argin_name;
   }
 
-  int setTeamName(int team_index = 0 /*default value*/)
+  string name;
+
+  // Overloaded setter for team_nam
+  int setTeamName(int index = 2)
   {
-    switch (team_index)
+    if (index == 0)
     {
-      case 0:
-        return setTeamName("red");
-        break;
-      case 1:
-        return setTeamName("green");
-        break;
-      case 2:
-        return setTeamName("blue");
-        break;
-      default:
-        std::cout << "wrong team index given. Cannot set team" << std::endl;
-        break;
+      setTeamName("red");
+    }
+    else if (index == 1)
+    {
+      setTeamName("green");
+    }
+    else if (index == 2)
+    {
+      setTeamName("blue");
+    }
+    else
+    {
+      setTeamName("none");
     }
   }
 
-  // Set team name, if given a correct team name (accessor)
-  int setTeamName(std::string team)
+  // Setter for team_nam
+  int setTeamName(string argin_team)
   {
-    if (team == "red" || team == "green" || team == "blue")
+    if (argin_team == "red" || argin_team == "green" || argin_team == "blue")
     {
-      // this->team é a propriedade da class definida no private, team é o argumento de entrada
-      this->team = team;
+      team_name = argin_team;
       return 1;
     }
     else
     {
-      std::cout << "cannot set team name to " << team << std::endl;
+      cout << "cannot set team name to " << argin_team << endl;
       return 0;
     }
   }
 
-  // Gets team name (accessor)
-  std::string getTeamName(void)
+  // Getter of team_name
+  string getTeamName(void)
   {
-    return team;
+    return team_name;
   }
-
-  std::string name;  // A public atribute
 
 private:
-  std::string team;
+  string team_name;
 };
 
-// Class myPlayer extends class Player
-class myPlayer : public Player
+class MyPlayer : public Player
 {
 public:
-  myPlayer(std::string argin_name, std::string argin_team) : Player(argin_name)
+  boost::shared_ptr<Team> red_team;
+  boost::shared_ptr<Team> green_team;
+  boost::shared_ptr<Team> blue_team;
+  tf::TransformBroadcaster br;  // declare the broadcaster
+
+  MyPlayer(string argin_name, string argin_team) : Player(argin_name)
   {
+    red_team = boost::shared_ptr<Team>(new Team("red"));
+    green_team = boost::shared_ptr<Team>(new Team("green"));
+    blue_team = boost::shared_ptr<Team>(new Team("blue"));
+
     setTeamName(argin_team);
+
+    printReport();
+  }
+
+  void move(void)
+  {
+    tf::Transform transform;  // declare the transformation object
+    transform.setOrigin(tf::Vector3(-3, 5, 0.0));
+    tf::Quaternion q;
+    q.setRPY(0, 0, M_PI / 3);
+    transform.setRotation(q);
+    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", "bramos"));
+  }
+
+  void printReport()
+  {
+    cout << "My name is " << name << " and my team is " << getTeamName() << endl;
   }
 };
 
-int main()
-{
-  // Creating an instance of class Player
-  Player player("moliveira");
-  player.setTeamName("red");
-  player.setTeamName(2);
-  std::cout << "player.name is " << player.name << std::endl;
-  std::cout << "team is " << player.getTeamName() << std::endl;
+}  // end of namespace
 
-  // Creating an instance of class myPlayer
-  myPlayer my_player("moliveira", "green");
-  std::cout << "my_player.name is " << my_player.name << std::endl;
-  std::cout << "team is " << my_player.getTeamName() << std::endl;
+int main(int argc, char** argv)
+{
+  ros::init(argc, argv, "bramos");
+  ros::NodeHandle n;
+
+  // Creating an instance of class Player
+  rws_bramos::MyPlayer my_player("bramos", "red");
+
+  if (my_player.red_team->playerBelongsToTeam("amartins"))
+  {
+    cout << "a joana esta na equipa certa" << endl;
+  };
+
+  ros::Rate loop_rate(10);
+  while (ros::ok())
+  {
+    my_player.move();
+
+    ros::spinOnce();
+    loop_rate.sleep();
+  }
 }
