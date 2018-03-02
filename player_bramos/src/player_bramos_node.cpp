@@ -122,7 +122,6 @@ public:
 
   void printReport()
   {
-    ROS_INFO_STREAM("My name is " << name << " and my team is " << getTeamName().c_str() << endl);
     ROS_INFO("My name is %s and my team is %s", name.c_str(), getTeamName().c_str());
   }
 };
@@ -140,6 +139,7 @@ int main(int argc, char** argv)
   ros::Rate loop_rate(10);
   while (ros::ok())
   {
+    ROS_INFO_STREAM("My name is " << name << " and my team is " << getTeamName().c_str() << endl);
     my_player.move();
 
     ros::spinOnce();
