@@ -8,10 +8,16 @@
 #include <ros/ros.h>
 #include <rws2018_libs/team.h>
 #include <tf/transform_broadcaster.h>
+#include <tf/transform_listener.h>
+#include <visualization_msgs/Marker.h>
 
 #include <rws2018_msgs/MakeAPlay.h>
 
+#define DEFAULT_TIME 0.05
+
 using namespace std;
+using namespace ros;
+using namespace tf;
 
 namespace rws_bramos
 {
@@ -84,6 +90,8 @@ public:
   ros::NodeHandle n;
   boost::shared_ptr<ros::Subscriber> sub;
   tf::Transform T;  // declare the transformation object (player's pose wrt world)
+  boost::shared_ptr<ros::Publisher> pub;
+  tf::TransformListener listener;
 
   MyPlayer(string argin_name, string argin_team /*disregard this one. overrided by params*/) : Player(argin_name)
   {
@@ -137,6 +145,26 @@ public:
     ROS_INFO("Warping to x=%f y=%f a=%f", x, y, alfa);
   }
 
+  double getAngleToPLayer(string other_player, double time_to_wait = DEFAULT_TIME)
+  {
+    StampedTransform t;  // The transform object
+    // Time now = Time::now(); //get the time
+    Time now = Time(0);  // get the latest transform received
+
+    try
+    {
+      listener.waitForTransform("bramos", other_player, now, Duration(time_to_wait));
+      listener.lookupTransform("bramos", other_player, now, t);
+    }
+    catch (TransformException& ex)
+    {
+      ROS_ERROR("%s", ex.what());
+      return NAN;
+    }
+
+    return atan2(t.getOrigin().y(), t.getOrigin().x());
+  }
+
   void move(const rws2018_msgs::MakeAPlay::ConstPtr& msg)
   {
     double x = T.getOrigin().x();
@@ -147,7 +175,27 @@ public:
     //--- AI PART
     //---------------------------------------
     double displacement = 6;  // computed using AI
-    double delta_alpha = M_PI / 2;
+    double delta_alpha = getAngleToPLayer("tosorio");
+
+    if (isnan(delta_alpha))
+      delta_alpha = 0;
+
+    visualization_msgs::Marker marker;
+    marker.header.frame_id = "bramos";
+    marker.header.stamp = ros::Time();
+    marker.ns = "bramos";
+    marker.id = 0;
+    marker.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
+    marker.action = visualization_msgs::Marker::ADD;
+    marker.pose.orientation.w = 1.0;
+    marker.scale.z = 0.3;
+    marker.color.a = 1.0;  // Don't forget to set the alpha!
+    marker.color.r = 1.0;
+    marker.color.g = 1.0;
+    marker.color.b = 0.0;
+    marker.text = "I have no idea of what I am doing!";
+    marker.lifetime = ros::Duration(2);
+    pub->publish(marker);
 
     //---------------------------------------
     //--- CONSTRAINS PART
