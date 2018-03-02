@@ -9,6 +9,8 @@
 #include <rws2018_libs/team.h>
 #include <tf/transform_broadcaster.h>
 
+#include <rws2018_msgs/MakeAPlay.h>
+
 using namespace std;
 
 namespace rws_bramos
@@ -77,9 +79,13 @@ public:
   boost::shared_ptr<Team> my_team;
   boost::shared_ptr<Team> my_preys;
   boost::shared_ptr<Team> my_hunters;
-  tf::TransformBroadcaster br;  // declare the broadcaster
 
-  MyPlayer(string argin_name, string argin_team) : Player(argin_name)
+  tf::TransformBroadcaster br;  // declare the broadcaster
+  ros::NodeHandle n;
+  boost::shared_ptr<ros::Subscriber> sub;
+  tf::Transform T;  // declare the transformation object (player's pose wrt world)
+
+  MyPlayer(string argin_name, string argin_team /*disregard this one. overrided by params*/) : Player(argin_name)
   {
     red_team = boost::shared_ptr<Team>(new Team("red"));
     green_team = boost::shared_ptr<Team>(new Team("green"));
@@ -107,23 +113,42 @@ public:
       setTeamName("green");
     }
 
+    sub = boost::shared_ptr<ros::Subscriber>(new ros::Subscriber());
+    *sub = n.subscribe("/make_a_play", 100, &MyPlayer::move, this);
+
+    warp(randomizePosition(), randomizePosition(), M_PI / 2);
+
     printReport();
   }
 
-  void move(void)
+  void warp(double x, double y, double alfa)
   {
-    tf::Transform transform;  // declare the transformation object
-    transform.setOrigin(tf::Vector3(-3, 5, 0.0));
+    T.setOrigin(tf::Vector3(x, y, 0.0));
     tf::Quaternion q;
-    q.setRPY(0, 0, M_PI / 3);
-    transform.setRotation(q);
-    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", "bramos"));
+    q.setRPY(0, 0, alfa);
+    T.setRotation(q);
+    br.sendTransform(tf::StampedTransform(T, ros::Time::now(), "world", "bramos"));
+    ROS_INFO("Warping to x=%f y=%f a=%f", x, y, alfa);
+  }
+
+  void move(const rws2018_msgs::MakeAPlay::ConstPtr& msg)
+  {
+    double x = T.getOrigin().x();
+    double y = T.getOrigin().y();
+    double a = 0;
+
+    T.setOrigin(tf::Vector3(x += 0.01, y, 0.0));
+    tf::Quaternion q;
+    q.setRPY(0, 0, a);
+    T.setRotation(q);
+
+    br.sendTransform(tf::StampedTransform(T, ros::Time::now(), "world", "bramos"));
+    ROS_INFO("Moving to ");
   }
 
   void printReport()
   {
-    ROS_INFO_STREAM("My name is " << name << " and my team is " << getTeamName().c_str() << endl);
-    ROS_INFO("My name is %s and my team is %s", name.c_str(), getTeamName().c_str());
+    ROS_INFO("My name is %s and my team is %s", name.c_str(), (getTeamName().c_str()));
   }
 };
 
@@ -135,14 +160,17 @@ int main(int argc, char** argv)
   ros::NodeHandle n;
 
   // Creating an instance of class Player
-  rws_bramos::MyPlayer my_player("bramos", "red");
+  rws_bramos::MyPlayer my_player("bramos", "does not matter");
 
-  ros::Rate loop_rate(10);
-  while (ros::ok())
-  {
-    my_player.move();
+  ros::spin();
+  /*
+    ros::Rate loop_rate(10);
+    while (ros::ok())
+    {
+      my_player.move();
 
-    ros::spinOnce();
-    loop_rate.sleep();
-  }
+      ros::spinOnce();
+      loop_rate.sleep();
+    }
+    */
 }
