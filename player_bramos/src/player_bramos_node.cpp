@@ -54,7 +54,6 @@ public:
     }
     else
     {
-      cout << "cannot set team name to " << argin_team << endl;
       return 0;
     }
   }
@@ -75,6 +74,9 @@ public:
   boost::shared_ptr<Team> red_team;
   boost::shared_ptr<Team> green_team;
   boost::shared_ptr<Team> blue_team;
+  boost::shared_ptr<Team> my_team;
+  boost::shared_ptr<Team> my_preys;
+  boost::shared_ptr<Team> my_hunters;
   tf::TransformBroadcaster br;  // declare the broadcaster
 
   MyPlayer(string argin_name, string argin_team) : Player(argin_name)
@@ -83,7 +85,27 @@ public:
     green_team = boost::shared_ptr<Team>(new Team("green"));
     blue_team = boost::shared_ptr<Team>(new Team("blue"));
 
-    setTeamName(argin_team);
+    if (red_team->playerBelongsToTeam(name))
+    {
+      my_team = red_team;
+      my_preys = green_team;
+      my_hunters = blue_team;
+      setTeamName("red");
+    }
+    else if (blue_team->playerBelongsToTeam(name))
+    {
+      my_preys = red_team;
+      my_hunters = green_team;
+      my_team = blue_team;
+      setTeamName("blue");
+    }
+    else if (green_team->playerBelongsToTeam(name))
+    {
+      my_hunters = red_team;
+      my_team = green_team;
+      my_preys = blue_team;
+      setTeamName("green");
+    }
 
     printReport();
   }
@@ -100,7 +122,8 @@ public:
 
   void printReport()
   {
-    cout << "My name is " << name << " and my team is " << getTeamName() << endl;
+    ROS_INFO_STREAM("My name is " << name << " and my team is " << getTeamName().c_str() << endl);
+    ROS_INFO("My name is %s and my team is %s", name.c_str(), getTeamName().c_str());
   }
 };
 
@@ -113,11 +136,6 @@ int main(int argc, char** argv)
 
   // Creating an instance of class Player
   rws_bramos::MyPlayer my_player("bramos", "red");
-
-  if (my_player.red_team->playerBelongsToTeam("amartins"))
-  {
-    cout << "a joana esta na equipa certa" << endl;
-  };
 
   ros::Rate loop_rate(10);
   while (ros::ok())
