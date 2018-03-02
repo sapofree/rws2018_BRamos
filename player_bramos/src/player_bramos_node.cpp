@@ -166,7 +166,7 @@ public:
     my_move_T.setRotation(q1);
 
     T = T * my_move_T;
-    ROS_INFO("Moving to ");
+    br.sendTransform(tf::StampedTransform(T, ros::Time::now(), "world", "bramos"));
   }
 
   void printReport()
