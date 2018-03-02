@@ -116,7 +116,13 @@ public:
     sub = boost::shared_ptr<ros::Subscriber>(new ros::Subscriber());
     *sub = n.subscribe("/make_a_play", 100, &MyPlayer::move, this);
 
-    warp(randomizePosition(), randomizePosition(), M_PI / 2);
+    struct timeval t1;
+    gettimeofday(&t1, NULL);
+    srand(t1.tv_usec);
+    double start_x = ((double)rand() / (double)RAND_MAX) * 10 - 5;
+    double start_y = ((double)rand() / (double)RAND_MAX) * 10 - 5;
+    printf("start_x=%f start_y=%f\n", start_x, start_y);
+    warp(start_x, start_y, M_PI / 2);
 
     printReport();
   }
@@ -137,12 +143,29 @@ public:
     double y = T.getOrigin().y();
     double a = 0;
 
-    T.setOrigin(tf::Vector3(x += 0.01, y, 0.0));
-    tf::Quaternion q;
-    q.setRPY(0, 0, a);
-    T.setRotation(q);
+    //---------------------------------------
+    //--- AI PART
+    //---------------------------------------
+    double displacement = 6;  // computed using AI
+    double delta_alpha = M_PI / 2;
 
-    br.sendTransform(tf::StampedTransform(T, ros::Time::now(), "world", "bramos"));
+    //---------------------------------------
+    //--- CONSTRAINS PART
+    //---------------------------------------
+    double displacement_max = msg->dog;
+    displacement > displacement_max ? displacement = displacement_max : displacement = displacement;
+
+    double delta_alpha_max = M_PI / 30;
+    fabs(delta_alpha) > fabs(delta_alpha_max) ? delta_alpha = delta_alpha_max * delta_alpha / fabs(delta_alpha) :
+                                                delta_alpha = delta_alpha;
+
+    tf::Transform my_move_T;  // declare the transformation object (player's pose wrt world)
+    my_move_T.setOrigin(tf::Vector3(displacement, 0.0, 0.0));
+    tf::Quaternion q1;
+    q1.setRPY(0, 0, delta_alpha);
+    my_move_T.setRotation(q1);
+
+    T = T * my_move_T;
     ROS_INFO("Moving to ");
   }
 
