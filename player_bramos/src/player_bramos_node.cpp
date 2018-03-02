@@ -62,7 +62,8 @@ public:
     }
     else
     {
-      return 0;
+      ROS_ERROR("cannot set team name to %s", argin_team.c_str());
+      ros::shutdown();
     }
   }
 
@@ -106,19 +107,19 @@ public:
       my_hunters = blue_team;
       setTeamName("red");
     }
-    else if (blue_team->playerBelongsToTeam(name))
-    {
-      my_preys = red_team;
-      my_hunters = green_team;
-      my_team = blue_team;
-      setTeamName("blue");
-    }
     else if (green_team->playerBelongsToTeam(name))
     {
-      my_hunters = red_team;
       my_team = green_team;
       my_preys = blue_team;
+      my_hunters = red_team;
       setTeamName("green");
+    }
+    else if (blue_team->playerBelongsToTeam(name))
+    {
+      my_team = blue_team;
+      my_preys = red_team;
+      my_hunters = green_team;
+      setTeamName("blue");
     }
 
     sub = boost::shared_ptr<ros::Subscriber>(new ros::Subscriber());
@@ -133,6 +134,8 @@ public:
     double start_x = ((double)rand() / (double)RAND_MAX) * 10 - 5;
     double start_y = ((double)rand() / (double)RAND_MAX) * 10 - 5;
     printf("start_x=%f start_y=%f\n", start_x, start_y);
+
+    ros::Duration(0.1).sleep();
     warp(start_x, start_y, M_PI / 2);
 
     printReport();
@@ -270,17 +273,15 @@ int main(int argc, char** argv)
   ros::NodeHandle n;
 
   // Creating an instance of class Player
-  rws_bramos::MyPlayer my_player("bramos", "does not matter");
+  rws_bramos::MyPlayer my_player("bramos", "doesnotmatter");
 
   ros::spin();
-  /*
-    ros::Rate loop_rate(10);
-    while (ros::ok())
-    {
-      my_player.move();
+  // ros::Rate loop_rate(10);
+  // while (ros::ok())
+  //{
+  // my_player.move();
 
-      ros::spinOnce();
-      loop_rate.sleep();
-    }
-    */
+  // ros::spinOnce();
+  // loop_rate.sleep();
+  //}
 }
