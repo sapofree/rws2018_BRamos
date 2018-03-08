@@ -242,7 +242,7 @@ public:
     //---------------------------------------
     //--- CONSTRAINS PART
     //---------------------------------------
-    double displacement_max = msg->dog;
+    double displacement_max = msg->cheetah;
     displacement > displacement_max ? displacement = displacement_max : displacement = displacement;
 
     double delta_alpha_max = M_PI / 30;
