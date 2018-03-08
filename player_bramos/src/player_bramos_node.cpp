@@ -11,7 +11,9 @@
 #include <tf/transform_listener.h>
 #include <visualization_msgs/Marker.h>
 
+#include <rws2018_msgs/GameQuery.h>
 #include <rws2018_msgs/MakeAPlay.h>
+#include <sensor_msgs/PointCloud2.h>
 
 #define DEFAULT_TIME 0.05
 
@@ -90,8 +92,12 @@ public:
   tf::TransformBroadcaster br;  // declare the broadcaster
   ros::NodeHandle n;
   boost::shared_ptr<ros::Subscriber> sub;
+  boost::shared_ptr<ros::Subscriber> sub_pc;
   tf::Transform T;  // declare the transformation object (player's pose wrt world)
   boost::shared_ptr<ros::Publisher> pub;
+  boost::shared_ptr<ros::ServiceServer> game_query_srv;
+  string my_point_cloud_guess;
+
   tf::TransformListener listener;
 
   MyPlayer(string argin_name, string argin_team /*disregard this one. overrided by params*/) : Player(argin_name)
@@ -125,6 +131,9 @@ public:
     sub = boost::shared_ptr<ros::Subscriber>(new ros::Subscriber());
     *sub = n.subscribe("/make_a_play", 100, &MyPlayer::move, this);
 
+    sub_pc = boost::shared_ptr<ros::Subscriber>(new ros::Subscriber());
+    *sub_pc = n.subscribe("/object_point_cloud", 1, &MyPlayer::processPointCloud, this);
+
     pub = boost::shared_ptr<ros::Publisher>(new ros::Publisher());
     *pub = n.advertise<visualization_msgs::Marker>("/bocas", 0);
 
@@ -139,6 +148,13 @@ public:
     warp(start_x, start_y, M_PI / 2);
 
     printReport();
+  }
+
+  bool respondToGameQuery(rws2018_msgs::GameQuery::Request& req, rws2018_msgs::GameQuery::Response& res)
+  {
+    ROS_WARN("I am %s and I am responding to a service request!", name.c_str());
+    res.resposta = my_point_cloud_guess;
+    return true;
   }
 
   void warp(double x, double y, double alfa)
@@ -189,6 +205,31 @@ public:
     }
 
     return atan2(t.getOrigin().y(), t.getOrigin().x());
+  }
+
+  void processPointCloud(const sensor_msgs::PointCloud2::ConstPtr& msg)
+  {
+    ROS_INFO("Received a point cloud.");
+    // AI part for object recognition
+    int index = (rand() * 4);
+    switch (index)
+    {
+      case 0:
+        my_point_cloud_guess = "tomato";
+        break;
+      case 1:
+        my_point_cloud_guess = "onion";
+        break;
+      case 2:
+        my_point_cloud_guess = "banana";
+        break;
+      case 3:
+        my_point_cloud_guess = "soda_can";
+        break;
+      default:
+        my_point_cloud_guess = "banana";
+        break;
+    }
   }
 
   void move(const rws2018_msgs::MakeAPlay::ConstPtr& msg)
